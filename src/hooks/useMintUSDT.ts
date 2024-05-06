@@ -1,7 +1,7 @@
 import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { useCallback } from "react";
 import { parseUnits } from "viem";
-import { MOCK_USDT_ADDRESS } from "@/configs/contact.ts";
+import { MOCK_USDT_ADDRESS } from "@/configs/constants.ts";
 import { USDT_MOCK_ABI } from "@/configs/usdt_mock_abi.ts";
 
 export const useMintUSDT = () => {

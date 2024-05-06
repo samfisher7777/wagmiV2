@@ -1,5 +1,5 @@
 import { useAccount, useBalance, useBlockNumber } from "wagmi";
-import { MOCK_USDT_ADDRESS } from "@/configs/contact.ts";
+import { MOCK_USDT_ADDRESS } from "@/configs/constants.ts";
 import { useEffect } from "react";
 
 export const useUserBalanceUSDT = () => {
