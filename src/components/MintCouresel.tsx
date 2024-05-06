@@ -1,3 +1,6 @@
+import { useAccount } from "wagmi";
+import { useCallback, useEffect, useState } from "react";
+
 import {
   Carousel,
   CarouselApi,
@@ -7,173 +10,50 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ChangeEvent, useCallback, useEffect, useState } from "react";
-import { Input } from "@/components/ui/input.tsx";
-import { toast } from "sonner";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu.tsx";
-import {
-  useAccount,
-  useBalance,
-  useBlockNumber,
-  useConnect,
-  useDisconnect,
-  useWaitForTransactionReceipt,
-  useWriteContract,
-} from "wagmi";
-import { MOCK_USDT_ADDRESS } from "@/configs/contact.ts";
-import { USDT_MOCK_ABI } from "@/configs/usdt_mock_abi.ts";
-import { parseUnits } from "viem";
+import { ConnectWallet } from "@/components/ConnectWallet.tsx";
+import { WalletBalance } from "@/components/WalletBalance.tsx";
+import { MintToken } from "@/components/MintToken.tsx";
+import { useQuery } from "@tanstack/react-query";
+import { apiKey, etherscanUrl, MOCK_USDT_ADDRESS } from "@/configs/contact.ts";
 
-const ConnectWallet = () => {
-  const { connectors, connect } = useConnect();
-  const { disconnect } = useDisconnect();
-  const { isConnected } = useAccount();
-
-  return (
-    <div className="flex flex-col items-center justify-center h-full">
-      {isConnected ? (
-        <Button onClick={() => disconnect()}>Disconnect</Button>
-      ) : (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button>Connect Wallet</Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuLabel>Choose your wallet</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {connectors.map((connector) => (
-              <DropdownMenuItem
-                key={connector.uid}
-                onClick={() => connect({ connector })}
-              >
-                {connector.name}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-    </div>
+const getHistoryUsdtTxFromUserAddress = async (address?: string) => {
+  const res = await fetch(
+    `${etherscanUrl}?module=account&action=tokentx&contractaddress=${MOCK_USDT_ADDRESS}&address=${address}&page=1&offset=100&startblock=0&endblock=99999999&sort=desc&apikey=${apiKey}`,
   );
+  return await res.json();
 };
 
-const useUserBalanceUSDT = () => {
+const useHistoryUSDT = () => {
   const { address } = useAccount();
-  const { data: blockNumber } = useBlockNumber({ watch: true });
-  const { data, queryKey, refetch, ...rest } = useBalance({
-    address,
-    token: MOCK_USDT_ADDRESS,
+  const { data } = useQuery({
+    queryKey: ["useHistoryUSDT", address],
+    enabled: !!address,
+    queryFn: () => getHistoryUsdtTxFromUserAddress(address),
   });
 
-  useEffect(() => {
-    if (Number(blockNumber) % 4 === 0) {
-      refetch();
-    }
-  }, [blockNumber]);
+  const hasTx = data && data.result.length > 0;
 
-  return { data, refetch, ...rest };
+  return {
+    hasTx,
+  };
 };
 
-const WalletBalance = () => {
-  const { data } = useUserBalanceUSDT();
-  const [amount, setAmount] = useState<string | undefined>("0");
-
-  useEffect(() => {
-    if (data) {
-      setAmount(data.formatted);
-    }
-  }, [data]);
-
-  const onChangeHandler = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      setAmount(e.target.value);
-      toast("It's a shame you can't edit your balance so easily", {
-        description: "HA-HA it's not that simple",
-        action: {
-          label: "Return init balance",
-          onClick: () => setAmount(data?.formatted),
-        },
-      });
-    },
-    [data?.formatted],
-  );
-
+const FinishSection = ({
+  scrollToBalanceHandler,
+}: {
+  scrollToBalanceHandler: () => void;
+}) => {
   return (
-    <div className="flex flex-col justify-center items-center h-[100px]">
-      <h3>Your wallet balance</h3>
-
-      <Input
-        value={amount}
-        type="number"
-        className="w-[300px]"
-        onChange={onChangeHandler}
-      />
+    <div className="gap-2 flex flex-col items-center justify-center h-full">
+      <h3>That's it, look at your balance, it may updated</h3>
+      <Button onClick={scrollToBalanceHandler}>Go to balance</Button>
     </div>
   );
 };
-const useMintUSDT = () => {
-  const {
-    writeContract,
-    status: walletStatus,
-    data: hash,
-  } = useWriteContract();
 
-  const mintUsdt = useCallback((amount: number) => {
-    const bigIntAmount = parseUnits(amount.toString(), 6);
-    writeContract({
-      address: MOCK_USDT_ADDRESS,
-      abi: USDT_MOCK_ABI,
-      functionName: "mint",
-      args: [bigIntAmount],
-    });
-  }, []);
-
-  const { status: txStatus } = useWaitForTransactionReceipt({ hash });
-
-  const isLoading = walletStatus === "pending";
-  const isSuccess = txStatus === "success";
-
-  return { mintUsdt, isLoading, isSuccess };
-};
-
-const MintToken = () => {
-  const { mintUsdt, isLoading, isSuccess } = useMintUSDT();
-  const { refetch } = useUserBalanceUSDT();
-  const [amount, setAmount] = useState<undefined | number>(1);
-
-  const mintHandler = useCallback(() => {
-    if (amount) {
-      mintUsdt(amount);
-    }
-  }, [amount]);
-
-  useEffect(() => {
-    if (isSuccess) {
-      refetch();
-    }
-  }, [isSuccess]);
-
-  return (
-    <div className="flex flex-col items-center justify-center h-[100px] gap-1">
-      <Input
-        className="w-[300px]"
-        type="number"
-        value={amount}
-        onChange={(e) => setAmount(+e.target.value)}
-      />
-      <Button disabled={isLoading} onClick={mintHandler}>
-        mint?
-      </Button>
-    </div>
-  );
-};
 export const MintCarousel = () => {
+  useHistoryUSDT();
+
   const { isConnected } = useAccount();
   const [api, setApi] = useState<CarouselApi>();
   const [canScrollNext, setCanScrollNext] = useState<boolean>(false);
@@ -192,7 +72,7 @@ export const MintCarousel = () => {
     });
   }, [api]);
 
-  const scrollToBalanceHednler = useCallback(() => {
+  const scrollToBalanceHandler = useCallback(() => {
     if (!api) {
       return;
     }
@@ -214,10 +94,7 @@ export const MintCarousel = () => {
             <MintToken />
           </CarouselItem>
           <CarouselItem>
-            <div className="gap-2 flex flex-col items-center justify-center h-full">
-              <h3>That's it, look at your balance, it may updated</h3>
-              <Button onClick={scrollToBalanceHednler}>Go to balance</Button>
-            </div>
+            <FinishSection scrollToBalanceHandler={scrollToBalanceHandler} />
           </CarouselItem>
         </CarouselContent>
         {isConnected && canScrollPrev && <CarouselPrevious />}
