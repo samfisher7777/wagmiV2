@@ -183,7 +183,6 @@ export const MintCarousel = () => {
     if (!api) {
       return;
     }
-
     setCanScrollNext(api.canScrollNext());
     setCanScrollPrev(api.canScrollPrev());
 
@@ -191,6 +190,14 @@ export const MintCarousel = () => {
       setCanScrollNext(emblaApi.canScrollNext());
       setCanScrollPrev(emblaApi.canScrollPrev());
     });
+  }, [api]);
+
+  const scrollToBalanceHednler = useCallback(() => {
+    if (!api) {
+      return;
+    }
+
+    api.scrollTo(1);
   }, [api]);
 
   return (
@@ -209,7 +216,7 @@ export const MintCarousel = () => {
           <CarouselItem>
             <div className="gap-2 flex flex-col items-center justify-center h-full">
               <h3>That's it, look at your balance, it may updated</h3>
-              <Button>Go to balance</Button>
+              <Button onClick={scrollToBalanceHednler}>Go to balance</Button>
             </div>
           </CarouselItem>
         </CarouselContent>
