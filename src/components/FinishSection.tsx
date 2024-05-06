@@ -12,6 +12,7 @@ import { ITxHistoryData } from "@/configs/types.ts";
 import { useHistoryUsdt } from "@/hooks/useHistoryUsdt.ts";
 import { useMemo, useState } from "react";
 import { getColumns } from "@/configs/columnConfig.tsx";
+import { useLocalStorageTx } from "@/hooks/useMintUSDT.ts";
 
 export const FinishSection = ({
   scrollToBalanceHandler,
@@ -20,22 +21,31 @@ export const FinishSection = ({
 }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const { data } = useHistoryUsdt({ enabled: isOpen });
+  const { txPending } = useLocalStorageTx();
 
-  const txHistoryData = useMemo(
-    () =>
-      data
-        ? data.result.map<ITxHistoryData>(
-            ({ value, hash, timeStamp, tokenSymbol }) => ({
-              value,
-              hash,
-              timeStamp,
-              tokenSymbol,
-              status: "Executed",
-            }),
-          )
-        : [],
-    [data],
-  );
+  const txHistoryData = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+    const mapTxPending = new Map(Object.entries(txPending));
+
+    const prepareData = data.result.map<ITxHistoryData>(
+      ({ value, hash, timeStamp, tokenSymbol }) => {
+        if (mapTxPending.has(hash)) {
+          mapTxPending.delete(hash);
+        }
+        return {
+          value,
+          hash,
+          timeStamp,
+          tokenSymbol,
+          status: "Executed",
+        };
+      },
+    );
+
+    return [...mapTxPending.values(), ...prepareData];
+  }, [data, txPending]);
 
   const columnConfig = useMemo(() => getColumns(), []);
 

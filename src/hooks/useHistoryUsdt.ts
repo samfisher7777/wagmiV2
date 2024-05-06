@@ -15,12 +15,16 @@ const getHistoryUsdtTxFromUserAddress = async (address?: string) => {
 
   return data;
 };
+
 export const useHistoryUsdt = ({ enabled }: { enabled: boolean }) => {
   const { address } = useAccount();
 
-  return useQuery({
+  const { data, ...rest } = useQuery({
     queryKey: ["useHistoryUSDT", address],
     enabled: !!address && enabled,
     queryFn: () => getHistoryUsdtTxFromUserAddress(address),
+    refetchInterval: 10000,
   });
+
+  return { data, ...rest };
 };

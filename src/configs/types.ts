@@ -38,5 +38,5 @@ export interface ITxHistoryData {
   timeStamp: string;
   hash: string;
   tokenSymbol: string;
-  status: string;
+  status?: string;
 }

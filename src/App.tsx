@@ -18,7 +18,9 @@ export const config = createConfig({
 });
 
 const WagmiProvider = ({ children }: PropsWithChildren) => (
-  <WagmiBaseProvider config={config}> {children}</WagmiBaseProvider>
+  <WagmiBaseProvider config={config} reconnectOnMount>
+    {children}
+  </WagmiBaseProvider>
 );
 
 const queryClient = new QueryClient();
