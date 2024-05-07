@@ -1,8 +1,25 @@
 import { useMintUSDT } from "@/hooks/useMintUSDT.ts";
 import { useUserBalanceUSDT } from "@/hooks/useUserBalanceUSDT.ts";
-import { useCallback, useEffect, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 import { Input } from "@/components/ui/input.tsx";
 import { Button } from "@/components/ui/button.tsx";
+import { useAccount, useSwitchChain } from "wagmi";
+import { sepolia } from "wagmi/chains";
+
+const Web3ButtonValidation = ({ children }: { children: ReactNode }) => {
+  const { switchChain } = useSwitchChain();
+  const { chain } = useAccount();
+
+  if (!chain || (chain && chain.id !== sepolia.id)) {
+    return (
+      <Button onClick={() => switchChain({ chainId: sepolia.id })}>
+        Switch network to Sepolia
+      </Button>
+    );
+  }
+
+  return children;
+};
 
 export const MintToken = () => {
   const { mintUsdt, isLoading, isSuccess } = useMintUSDT();
@@ -29,9 +46,11 @@ export const MintToken = () => {
         value={amount}
         onChange={(e) => setAmount(+e.target.value)}
       />
-      <Button disabled={isLoading} onClick={mintHandler}>
-        mint?
-      </Button>
+      <Web3ButtonValidation>
+        <Button disabled={isLoading} onClick={mintHandler}>
+          mint?
+        </Button>
+      </Web3ButtonValidation>
     </div>
   );
 };
